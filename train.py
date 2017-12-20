@@ -1,10 +1,11 @@
 import os
 import codecs
+import time
 import numpy as np
 import tensorflow as tf
 import data_util
 import similarity
-from BiLSTM import BiLSTM
+from biLSTM import BiLSTM
 
 # --------------Parameters begin--------------
 
@@ -27,8 +28,8 @@ tf.flags.DEFINE_integer("rnn_size", 100, "Neurons number of hidden layer in LSTM
 tf.flags.DEFINE_float("margin", 0.1, "Constant of max-margin loss (default: 0.1).")
 tf.flags.DEFINE_integer("max_grad_norm", 5, "Control gradient expansion (default: 5).")
 tf.flags.DEFINE_integer("embedding_dim", 50, "Dimensionality of character embedding (default: 50).")
-tf.flags.DEFINE_integer("max_sentence_len", 100, "Maximum number of words in a sentence (default: 500).")
-tf.flags.DEFINE_float("dropout_keep_prob", 1.0, "Dropout keep probability (default: 1.0).")
+tf.flags.DEFINE_integer("max_sentence_len", 100, "Maximum number of words in a sentence (default: 100).")
+tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5).")
 tf.flags.DEFINE_float("learning_rate", 0.4, "Learning rate (default: 0.4).")
 tf.flags.DEFINE_float("lr_down_rate", 0.5, "Learning rate down rate(default: 0.5).")
 tf.flags.DEFINE_integer("lr_down_times", 4, "Learning rate down times (default: 4)")
@@ -37,7 +38,7 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.1, "L2 regularization lambda (default: 
 # training parameters
 tf.flags.DEFINE_integer("batch_size", 256, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 20, "Number of training epochs (default: 20)")
-tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
+tf.flags.DEFINE_integer("evaluate_every", 50, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
 tf.flags.DEFINE_integer("num_checkpoints", 20, "Number of checkpoints to store (default: 5)")
 
@@ -93,19 +94,40 @@ for q, ta, fa in data_util.training_batch_iter(
 # --------------Training begin--------------
 print("training...")
 with tf.Graph().as_default(), tf.device(FLAGS.gpu_device):
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_mem_usage)
-    session_conf = tf.ConfigProto(allow_soft_placement=FLAGS.allow_soft_placement, gpu_options=gpu_options)
+    gpu_options = tf.GPUOptions(
+        per_process_gpu_memory_fraction=FLAGS.gpu_mem_usage
+    )
+    session_conf = tf.ConfigProto(
+        allow_soft_placement=FLAGS.allow_soft_placement,
+        gpu_options=gpu_options
+    )
     with tf.Session(config=session_conf).as_default() as sess:
         globalStep = tf.Variable(0, name="globle_step", trainable=False)
-        lstm = BiLSTM(FLAGS.batch_size,
-                      FLAGS.max_sentence_len,
-                      embedding,
-                      FLAGS.embedding_dim,
-                      FLAGS.rnn_size,
-                      FLAGS.margin)
+        lstm = BiLSTM(
+            FLAGS.batch_size,
+            FLAGS.max_sentence_len,
+            embedding,
+            FLAGS.embedding_dim,
+            FLAGS.rnn_size,
+            FLAGS.margin
+        )
+        
+        # define training procedure
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(lstm.loss, tvars), FLAGS.max_grad_norm)
         saver = tf.train.Saver()
+
+        # output directory for models and summaries
+        timestamp = str(int(time.time()))
+        out_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", timestamp))
+        print("Writing to {}\n".format(out_dir))
+
+        # summaries
+        loss_summary = tf.summary.scalar("loss", lstm.loss)
+        summary_op = tf.summary.merge([loss_summary])
+
+        summary_dir = os.path.join(out_dir, "summary", "train")
+        summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
 
         # evaluating
         def evaluate():
@@ -115,21 +137,38 @@ with tf.Graph().as_default(), tf.device(FLAGS.gpu_device):
                 test_feed_dict = {
                     lstm.inputTestQuestions: test_q,
                     lstm.inputTestAnswers: test_a,
-                    lstm.keep_prob: 1.0
+                    lstm.dropout_keep_prob: 1.0
                 }
                 _, score = sess.run([globalStep, lstm.result], test_feed_dict)
                 scores.extend(score)
             cnt = 0
-            scores = np.absolute(scores)
+            #scores = np.absolute(scores)
             for test_id in range(test_question_num):
-                ix = test_id * 4
-                predict_true_ix = np.argmin(scores[ix:ix + 4])
-                if test_labels[predict_true_ix]:
+                offset = test_id * 4
+                predict_true_ix = np.argmax(scores[offset:offset + 4])
+                if test_labels[offset + predict_true_ix] == 1:
                     cnt += 1
             print("evaluation acc: ", cnt / test_question_num)
 
+            scores = []
+            for train_q, train_a in data_util.testing_batch_iter(train_questions, train_answers, train_question_num, FLAGS.batch_size):
+                test_feed_dict = {
+                    lstm.inputTestQuestions: train_q,
+                    lstm.inputTestAnswers: train_a,
+                    lstm.dropout_keep_prob: 1.0
+                }
+                _, score = sess.run([globalStep, lstm.result], test_feed_dict)
+                scores.extend(score)
+            cnt = 0
+            #scores = np.absolute(scores)
+            for train_id in range(train_question_num):
+                offset = train_id * 4
+                predict_true_ix = np.argmax(scores[offset:offset + 4])
+                if train_labels[offset + predict_true_ix] == 1:
+                    cnt += 1
+            print("evaluation acc(train): ", cnt / train_question_num)
+
         # training
-        print("training...")
         sess.run(tf.global_variables_initializer())
         lr = FLAGS.learning_rate
         for i in range(FLAGS.lr_down_times):
@@ -142,11 +181,12 @@ with tf.Graph().as_default(), tf.device(FLAGS.gpu_device):
                         lstm.inputQuestions: question,
                         lstm.inputTrueAnswers: trueAnswer,
                         lstm.inputFalseAnswers: falseAnswer,
-                        lstm.keep_prob: FLAGS.dropout_keep_prob
+                        lstm.dropout_keep_prob: FLAGS.dropout_keep_prob,
                     }
-                    _, step, _, _, loss = \
-                        sess.run([trainOp, globalStep, lstm.trueCosSim, lstm.falseCosSim, lstm.loss], feed_dict)
+                    _, step, _, _, loss, summary = \
+                        sess.run([trainOp, globalStep, lstm.trueCosSim, lstm.falseCosSim, lstm.loss, summary_op], feed_dict)
                     print("step:", step, "loss:", loss)
+                    summary_writer.add_summary(summary, step)
                     if step % FLAGS.evaluate_every == 0:
                         evaluate()
 

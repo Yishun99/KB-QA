@@ -47,12 +47,15 @@ class BiLSTM(object):
 
         self.result = self.get_cosine_similarity(test_question2, test_answer2)
 
-    @staticmethod
-    def biLSTMCell(x, hidden_size):
+    def biLSTMCell(self, x, hidden_size):
         input_x = tf.transpose(x, [1, 0, 2])
         input_x = tf.unstack(input_x)
         lstm_fw_cell = tf.contrib.rnn.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
+        lstm_fw_cell = tf.contrib.rnn.DropoutWrapper(lstm_fw_cell, input_keep_prob=self.dropout_keep_prob,
+                                                     output_keep_prob=self.dropout_keep_prob)
         lstm_bw_cell = tf.contrib.rnn.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
+        lstm_bw_cell = tf.contrib.rnn.DropoutWrapper(lstm_bw_cell, input_keep_prob=self.dropout_keep_prob,
+                                                     output_keep_prob=self.dropout_keep_prob)
         output, _, _ = tf.contrib.rnn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, input_x, dtype=tf.float32)
         output = tf.stack(output)
         output = tf.transpose(output, [1, 0, 2])
