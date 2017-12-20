@@ -10,7 +10,7 @@ class BiLSTM(object):
         self.rnn_size = rnn_size
         self.margin = margin
 
-        self.keep_prob = tf.placeholder(tf.float32, name="keep_drop")
+        self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
         self.inputQuestions = tf.placeholder(tf.int32, shape=[None, self.max_sentence_len])
         self.inputTrueAnswers = tf.placeholder(tf.int32, shape=[None, self.max_sentence_len])
         self.inputFalseAnswers = tf.placeholder(tf.int32, shape=[None, self.max_sentence_len])

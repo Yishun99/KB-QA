@@ -3,3 +3,5 @@ myTest.py
 data
 tmp
 res
+__pycache__
+run
