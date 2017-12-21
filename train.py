@@ -29,7 +29,7 @@ tf.flags.DEFINE_float("margin", 0.1, "Constant of max-margin loss (default: 0.1)
 tf.flags.DEFINE_integer("max_grad_norm", 5, "Control gradient expansion (default: 5).")
 tf.flags.DEFINE_integer("embedding_dim", 50, "Dimensionality of character embedding (default: 50).")
 tf.flags.DEFINE_integer("max_sentence_len", 100, "Maximum number of words in a sentence (default: 100).")
-tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5).")
+tf.flags.DEFINE_float("dropout_keep_prob", 0.45, "Dropout keep probability (default: 0.5).")
 tf.flags.DEFINE_float("learning_rate", 0.4, "Learning rate (default: 0.4).")
 tf.flags.DEFINE_float("lr_down_rate", 0.5, "Learning rate down rate(default: 0.5).")
 tf.flags.DEFINE_integer("lr_down_times", 4, "Learning rate down times (default: 4)")
@@ -142,7 +142,7 @@ with tf.Graph().as_default(), tf.device(FLAGS.gpu_device):
                 _, score = sess.run([globalStep, lstm.result], test_feed_dict)
                 scores.extend(score)
             cnt = 0
-            #scores = np.absolute(scores)
+            scores = np.absolute(scores)
             for test_id in range(test_question_num):
                 offset = test_id * 4
                 predict_true_ix = np.argmax(scores[offset:offset + 4])
@@ -160,7 +160,7 @@ with tf.Graph().as_default(), tf.device(FLAGS.gpu_device):
                 _, score = sess.run([globalStep, lstm.result], test_feed_dict)
                 scores.extend(score)
             cnt = 0
-            #scores = np.absolute(scores)
+            scores = np.absolute(scores)
             for train_id in range(train_question_num):
                 offset = train_id * 4
                 predict_true_ix = np.argmax(scores[offset:offset + 4])
