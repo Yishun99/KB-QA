@@ -11,7 +11,7 @@
 
 
 ## Model
-- 寻找相关问题: LSI
+- 寻找相关Knowledge: LSI
 - 训练: biLSTM
 
 ## Requirement
