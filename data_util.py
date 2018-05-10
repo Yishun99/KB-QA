@@ -56,9 +56,6 @@ def words_list2index(words_list, word2idx,  max_len):
 
 
 def load_data(knowledge_file, filename, word2idx, stop_words, sim_ixs, max_len):
-    """
-
-    """
     knowledge_texts = tokenizer(knowledge_file, stop_words)
     train_texts = tokenizer(filename, stop_words)
 

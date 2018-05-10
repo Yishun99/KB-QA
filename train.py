@@ -20,6 +20,7 @@ tf.flags.DEFINE_string("result_file", "res/predictRst.score", "Predict result.")
 tf.flags.DEFINE_string("save_file", "res/savedModel", "Save model.")
 
 # pre-trained word embedding vectors
+# Path to embedding file!
 tf.flags.DEFINE_string("embedding_file", "/home/douyishun/zhwiki_2017_03.sg_50d.word2vec", "Embedding vectors.")
 
 # hyperparameters
@@ -72,6 +73,7 @@ print("computing similarity...")
 train_sim_ixs = similarity.topk_sim_ix(FLAGS.knowledge_file, FLAGS.train_file, stop_words, FLAGS.k)
 test_sim_ixs = similarity.topk_sim_ix(FLAGS.knowledge_file, FLAGS.test_file, stop_words, FLAGS.k)
 
+
 # --------------Data preprocess begin--------------
 print("loading data...")
 train_questions, train_answers, train_labels, train_question_num = \
@@ -102,7 +104,7 @@ with tf.Graph().as_default(), tf.device(FLAGS.gpu_device):
         gpu_options=gpu_options
     )
     with tf.Session(config=session_conf).as_default() as sess:
-        globalStep = tf.Variable(0, name="globle_step", trainable=False)
+        globalStep = tf.Variable(0, name="global_step", trainable=False)
         lstm = BiLSTM(
             FLAGS.batch_size,
             FLAGS.max_sentence_len,

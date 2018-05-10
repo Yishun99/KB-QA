@@ -19,14 +19,6 @@ def generate_dic_and_corpus(knowledge_file, file_name, stop_words):
 
 
 def topk_sim_ix(knowledge_file, file_name, stop_words, k):
-    """
-
-    :param knowledge_file:
-    :param file_name:
-    :param stop_words:
-    :param k:
-    :return:
-    """
     sim_path = "tmp/" + file_name[5:-4]
     if os.path.exists(sim_path):
         with open(sim_path, "rb") as f:
