@@ -17,7 +17,7 @@
 ## Requirement
 
 - python3, tensorflow
-- stop_words, 中文word2vec
+- stop_words, 中文[word2vec](https://pan.baidu.com/s/1miBYRgO)(a2u6)
 
 ## Data Format
 
