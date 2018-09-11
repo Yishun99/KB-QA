@@ -1,6 +1,7 @@
 import os
 import codecs
 import time
+import sys
 import numpy as np
 import tensorflow as tf
 import data_util
@@ -51,7 +52,7 @@ tf.flags.DEFINE_string("gpu_device", "/gpu:0", "GPU device name.")
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement.")
 
 FLAGS = tf.flags.FLAGS
-FLAGS._parse_flags()
+FLAGS(sys.argv)
 print("\nParameters:")
 for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
@@ -70,8 +71,9 @@ stop_words = [w.strip() for w in stop_words]
 
 # top k most related knowledge
 print("computing similarity...")
-train_sim_ixs = similarity.topk_sim_ix(FLAGS.knowledge_file, FLAGS.train_file, stop_words, FLAGS.k)
-test_sim_ixs = similarity.topk_sim_ix(FLAGS.knowledge_file, FLAGS.test_file, stop_words, FLAGS.k)
+similarity.generate_dic_and_corpus(FLAGS.knowledge_file, FLAGS.train_file, stop_words)
+train_sim_ixs = similarity.topk_sim_ix(FLAGS.train_file, stop_words, FLAGS.k)
+test_sim_ixs = similarity.topk_sim_ix(FLAGS.test_file, stop_words, FLAGS.k)
 
 
 # --------------Data preprocess begin--------------

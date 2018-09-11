@@ -3,7 +3,6 @@ import os
 import codecs
 import pickle
 from gensim import corpora, models, similarities
-from pprint import pprint
 from data_util import tokenizer
 
 
@@ -18,7 +17,7 @@ def generate_dic_and_corpus(knowledge_file, file_name, stop_words):
     corpora.MmCorpus.serialize('tmp/knowledge_corpus.mm', corpus)
 
 
-def topk_sim_ix(knowledge_file, file_name, stop_words, k):
+def topk_sim_ix(file_name, stop_words, k):
     sim_path = "tmp/" + file_name[5:-4]
     if os.path.exists(sim_path):
         with open(sim_path, "rb") as f:
@@ -26,8 +25,6 @@ def topk_sim_ix(knowledge_file, file_name, stop_words, k):
         return sim_ixs
 
     # load dictionary and corpus
-    if not os.path.exists("tmp/dictionary.dict"):
-        generate_dic_and_corpus(knowledge_file, file_name, stop_words)
     dictionary = corpora.Dictionary.load("tmp/dictionary.dict")  # dictionary of knowledge and train data
     corpus = corpora.MmCorpus("tmp/knowledge_corpus.mm")  # corpus of knowledge
 
@@ -58,6 +55,7 @@ def topk_sim_ix(knowledge_file, file_name, stop_words, k):
 if __name__ == '__main__':
     stop_words_ = codecs.open("data/stop_words.txt", 'r', encoding='utf8').readlines()
     stop_words_ = [w.strip() for w in stop_words_]
-    res = topk_sim_ix("data/knowledge.txt", "data/train.txt", stop_words_, 5)
+    generate_dic_and_corpus("data/knowledge.txt", "data/train.txt", stop_words_)
+    res = topk_sim_ix("data/train.txt", stop_words_, 5)
     print(len(res))
 
